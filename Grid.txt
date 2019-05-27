@@ -1,0 +1,13 @@
+Vygenerovana mrizka krizovky o rozmerech: 8x8 
+Oznacte pozice cernych (prazdnych) ctvercu prepsanim _ za W.
+
+#################
+#W|W|_|_|_|_|_|W#
+#_|_|_|_|W|_|_|W#
+#_|W|_|_|W|_|_|_#
+#_|_|W|_|_|_|W|_#
+#_|_|_|_|_|W|_|_#
+#_|_|_|W|_|_|_|_#
+#W|_|_|_|_|W|_|_#
+#W|W|_|_|_|W|_|_#
+#################
