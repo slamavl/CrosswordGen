@@ -17,7 +17,7 @@ class Word():
         self.alternatives = None
         self.Nalt = 0
         self.coor = None
-        self._filled = False
+        self._fixed = False
         self._initialized = False
         if isinstance(database,Dictionary):
             self.database = database
@@ -41,7 +41,7 @@ class Word():
                 self._has_alternatives = False
                 self._alter_count = 0
                 self.Nalt = 0
-            self._filled = False
+            self._fixed = False
         elif (self.chars[indx] != "*") and (self.chars[indx] != char):
             raise IOError("Trying to rewrite letter with different one")
         else:
@@ -49,6 +49,8 @@ class Word():
             
     def get_new_word(self):
         # fill the grid and the grig will fill all word parts
+        if self._fixed:
+            return -1
         
         if self._has_alternatives:
 #            if self.chars[0] != self.alternatives[0][0] and self.index == 3:
@@ -77,3 +79,16 @@ class Word():
                 return (self.alternatives[0])
             else:
                 return -1
+    
+    def set_new_word(self,word):
+        chars = list(word) 
+        if self.len != len(chars):
+            raise IOError("Trying to set word of length" + str(self.len) +
+                          "with word" + word)
+        self.alternatives = [chars]
+        self._has_alternatives = True
+        self._alter_count = 1
+        self._fixed = True
+        return (self.alternatives[0])
+        
+        

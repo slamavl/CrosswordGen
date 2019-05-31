@@ -40,6 +40,39 @@ class Dictionaly_length():
         self.words = np.vstack((self.words,list(new_word)))
         self.size += 1
     
+    def add_word_list(self,new_word_list,randomize = False):
+        """ Add word to a database
+        """
+        
+        if not isinstance(new_word_list[0],str):
+            print(new_word_list[0])
+            if _compilation:
+                input("Error: Words must be added as strings")
+            raise IOError("Words must be added as strings")
+        if len(new_word_list[0]) != self.len:
+            if _compilation:
+                input("Error: Unable to load word list to class with word"+ 
+                          " length "+str(self.len))
+            raise IOError("Unable to load word list to class with word"+ 
+                          " length "+str(self.len))
+        
+        if not self._initialized:
+            self.words = np.chararray((0,self.len),itemsize=1,unicode=True)
+            self._initialized = True
+
+        char_list = []
+        for ii in range(len(new_word_list)):
+            char_list.append(list(new_word_list[ii]))
+        
+        if randomize:
+            char_list = np.array(char_list,dtype="U1")
+            indx = np.arange(len(new_word_list))
+            np.random.shuffle(indx)
+            char_list[:] = char_list[indx]
+
+        self.words = np.vstack((self.words,char_list))
+        self.size += len(new_word_list)
+    
     def new_word(self):
         """ generate new word from the database """
         
@@ -126,6 +159,13 @@ class Dictionary():
         self.Nwords = [0,0]
         self.max_len = 1
         self._gen_type = gen_type
+    
+    def clean_database(self):
+        if self._initialized:
+            self._initialized = False
+            self.len = [Dictionaly_length(0),Dictionaly_length(1)]
+            self.Nwords = [0,0]
+            self.max_len = 1
         
     def read_database(self,filename):
         fid  = open(filename,"r")
@@ -148,6 +188,46 @@ class Dictionary():
             self.Nwords[Nchar] +=1
         
         self._initialized = True
+    
+    
+    def read_database2(self,filename,randomize = False):
+        fid  = open(filename,"r")
+        lines = fid.read().splitlines()
+        fid.close()
+        
+        word_list = []
+        for ii in range(self.max_len):
+            word_list.append([])
+        
+        for string in lines:
+            # get rid of white spaces
+            word = string.replace(" ", "")
+            Nchar = len(word)
+            
+            # check if dictionary initialized
+            if Nchar>self.max_len:
+                for ii in range(Nchar - self.max_len):
+                    self.max_len += 1
+                    word_list.append([])
+                    self.len.append(Dictionaly_length(self.max_len,gen_type=self._gen_type))
+                    self.Nwords.append(0)
+            
+            word_list[Nchar-1].append(word)
+            
+#            self.len[Nchar].add_word(word)
+#            self.Nwords[Nchar] +=1
+#        
+#        self._initialized = True
+        
+        for ii in range(self.max_len):
+            if len(word_list[ii]) > 0:
+                self.len[ii+1].add_word_list(word_list[ii],randomize=randomize)
+            self.Nwords[ii+1] += len(word_list[ii])
+        
+        self._initialized = True
+            
+        #return word_list
+        
     
     def find_words(self,word):
         Nchar = len(word) 
@@ -184,13 +264,36 @@ class Dictionary():
                           "dictionary. Consider extending dictionary or changing"+
                           "the crosword puzzle grid")
         res = self.find_words(word)
-        if len(res) == 1:
+        # TODO: Correct this when two dictionaries are used (unique should be 
+        # done after reading dictionary)
+        if res is -1:
+            return False
+        elif len(res) >= 1:
             return True
+        else:
+            return False
     
     def randomize_dictionary(self):
         for ii in range(self.max_len):
             if self.len[ii].size > 1:
                 self.len[ii].randomize_words()
+
+def correct_database(filename_in,filename_out):
+    import unidecode
+    fid  = open(filename_in,"r")
+    lines = fid.read().splitlines()
+    fid.close()
+    
+    word_list = []
+    for string in lines:
+        # get rid of white spaces
+        word = string.replace(" ", "")
+        unaccented_word = unidecode.unidecode(word)
+        word_list.append(unaccented_word)
+            
+    with open(filename_out,"wt") as f:
+        for words in np.unique(word_list):
+            f.write(words+"\n")
         
 
 '''----------------------- TEST PART --------------------------------'''
@@ -200,7 +303,7 @@ if __name__=="__main__":
     print('-----------------------------------------') 
     
     database = Dictionary()
-    database.read_database("englishWords.txt")
+    database.read_database2("englishWords.txt")
     words = database.find_words("*il")
     print(words)
     words = database.find_words("ai*")

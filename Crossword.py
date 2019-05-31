@@ -4,7 +4,7 @@ Created on Fri Apr 12 12:49:16 2019
 
 @author: Vladislav Sláma
 """
-from Grid import Grid
+from Grid import Grid,is_column
 from Words import Word
 from Settings import language, _compilation, _gen_type
 from Dictionary import Dictionary
@@ -16,10 +16,24 @@ class CrossWord(Grid):
         self._filed = False
         self.crossword = None
         self._words_init = False
+        self._dict_file = dict_file
         self.database = Dictionary(gen_type=_gen_type)
-        self.database.read_database(dict_file)
-        self.database.randomize_dictionary()
+        if isinstance(self._dict_file,list):
+            for dict_actual in self._dict_file:
+                self.database.read_database2(dict_actual,randomize=True)
+        else:
+            self.database.read_database2(self._dict_file,randomize=True)
+            #self.database.randomize_dictionary()
         self._current = 0
+    
+    def reinitialize_database(self):
+        self.database.clean_database()
+        if isinstance(self._dict_file,list):
+            for dict_actual in self._dict_file:
+                self.database.read_database2(dict_actual,randomize=True)
+        else:
+            self.database.read_database2(self._dict_file,randomize=True)
+    
     
     def initialize_grid(self,shape, wtsp=None, shortest=2):
         super().__init__(shape, wtsp=wtsp, shortest=shortest)
@@ -133,6 +147,19 @@ class CrossWord(Grid):
         else:
             self.fill_word_indx(indx,word)
             return True
+    
+    def set_word(self,indx,word_in):
+        if indx >= self.Nwords:
+            if _compilation:
+                    input("Setting word with index larger than number of the words")
+            raise IOError("Setting word with index larger than number of the words")
+        
+        word = self.words[indx].set_new_word(word_in)
+        if word is -1:
+            return False
+        else:
+            self.fill_word_indx(indx,word)
+            return True
         
     def is_duplicate(self,indx):
         duplicate = False
@@ -147,16 +174,28 @@ class CrossWord(Grid):
         
 
             
-    def fill(self):
+    def fill(self,first_word = None):
         count = 0
         largest_len = 0
         largest_cross = None
+        hist = [0,0]
+        if first_word is not None:
+            self.set_word(0,first_word)
+            self._current = 1
+            largest_len = 1
+        
         while not self._filed:
             if (count)//100000 != (count-1)//100000 and count > 1:
                 print("Vyzkouseno kombinaci:",count,"Vyplneno slov:",largest_len,"z",self.Nwords)
                 print("Nejblizsi k vyplnene krizovce:")
                 print(largest_cross)
             count +=1
+            
+#            # TEST
+#            print(self._current,self.words[0].chars)
+#            if "".join(self.words[0].chars) != "kyselina":
+#                raise Exception()
+#            # END TEST
             
             if self._current < 0:
                 if _compilation:
@@ -179,7 +218,7 @@ class CrossWord(Grid):
                 if self._current == self.Nwords:
                     self._filed = True
                 
-                if self._current > largest_len:
+                if self._current >= largest_len:
                     largest_len = self._current
                     largest_cross = self.crossword.copy()
                     
@@ -188,14 +227,62 @@ class CrossWord(Grid):
             else:
                 # go back to last related word
                 # empty all words from current to the closest
+#                indx_closest = self.closest[self._current]
+#                if indx_closest == 0:
+#                    if first_word is None:
+#                        for indx in range(indx_closest+1,self._current+1):
+#                            self.empty_word(indx,force=True)
+#                        self.empty_word(indx_closest,force=False)
+#                        self._current = indx_closest
+#                    else:
+#                        for indx in range(indx_closest+1,self._current+1):
+#                            self.empty_word(indx,force=True)
+#                        self._current = 1
+#                        self.reinitialize_database()
+#                        print("Tried to rewrite fixed word",self._current)
+#                else:
+#                    for indx in range(indx_closest+1,self._current+1):
+#                        self.empty_word(indx,force=True)
+#                    self.empty_word(indx_closest,force=False)
+#                
+#                    self._current = indx_closest
+            
+                
+                
                 indx_closest = self.closest[self._current]
+#                print(count,self._current,indx_closest,hist)
+                if hist[0]+1 == count: #and hist[1] != self._current:
+#                    print("Changed:",hist[1],self._current,"in a row")
+#                    print(".... index",indx_closest,"should be changed")
+                    if first_word is not None and indx_closest == 0:
+                        # Two words were changed in two steps => Find second closest to hist[1]
+                        # looking for  cross.connected[hist[1]] < self._current
+                        for conn_indx in self.connected[hist[1]]:
+                            if conn_indx < self._current:
+                                indx_closest = conn_indx
+#                        print(".... but we will try",indx_closest,"instead.")
+#                        raise Exception()
+                
+                if indx_closest == 0 and first_word is not None:
+#                    print("Tried to rewrite fixed word",self._current)
+#                    print("Changed:",hist,count,self._current,"in a row")
+                    raise Exception()
+                    for indx in range(indx_closest+1,self._current+1):
+                        self.empty_word(indx,force=True)
+                    self._current = 1
+                    self.reinitialize_database()
+                
+                # go back to last related word
+                # empty all words from current to the closest
                 for indx in range(indx_closest+1,self._current+1):
                     self.empty_word(indx,force=True)
                 self.empty_word(indx_closest,force=False)
-                
-                self._current = indx_closest
             
-
+                hist = [count,self._current]
+                self._current = indx_closest
+                
+                
+                
             
                 
         # FIXME: Check for duplicate words
@@ -216,6 +303,7 @@ class CrossWord(Grid):
                     elif language == "Czech":
                         print("Slovo: {:12} nalezeno v databazi slov.".format(text))
                 else:
+                    text = "".join(word.chars)
                     if language == "English":
                         print("Incorrect word: " + text + ". Please report the bug")
                     elif language == "Czech":
@@ -224,7 +312,7 @@ class CrossWord(Grid):
         return state
                 
     
-    def plot_filled(self,fontsize=20, filename=None):
+    def plot_filled(self,fontsize=20, filename=None,res_highlight=False):
         import matplotlib.pyplot as plt
     
         black_sp = np.zeros(self.shape)
@@ -244,6 +332,18 @@ class CrossWord(Grid):
         offset_wrd = [0.3,0.2]
         mask = np.ones(self.shape,dtype = bool)
         count = 1
+        
+        if res_highlight:
+            # plot blue rectangle
+            word_len = len(self.word2coor[0])
+            if is_column(self.word2coor[0]):
+                start = [self.word2coor[0][-1][0],self.word2coor[0][-1][1]]
+                start[0] = self.shape[0] - start[0] -1
+                rect = plt.Rectangle((start[1],start[0]), 1.0, float(word_len), color='b', alpha=0.2)
+            else:
+                start = [self.word2coor[0][0][0],self.word2coor[0][0][1]]
+                rect = plt.Rectangle((start[1],self.shape[0] - start[0] -1), float(word_len), 1.0, color='b', alpha=0.2)
+            ax.add_patch(rect)
         
         for kk in range(len(self.word2coor)):
             word = self.word2coor[kk]

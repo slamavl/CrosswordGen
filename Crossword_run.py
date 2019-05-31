@@ -6,10 +6,8 @@ Created on Sun Apr 14 20:10:55 2019
 """
 
 from Crossword import CrossWord
-from Settings import language
+from Settings import language,dict_file
 from Grid import write_grid, read_grid
-
-dict_file = "dictionary.txt"
 
 cross = CrossWord(dict_file)
 
@@ -41,11 +39,25 @@ shortest = input(text[4])
 shortest = int(shortest) 
 shape,wtsp= read_grid("Grid.txt")
 cross.initialize_grid(shape,wtsp=wtsp,shortest=shortest)
-cross.fill()
+if language == "English":
+    first_word = input("Input the first word of len " + 
+                       str(cross.words[0].len) + " (if not specified random " +
+                       "word will be used): ")
+elif language == "Czech":
+    first_word = input("Zadej prvni slovo krizovky delky " + 
+                   str(cross.words[0].len) + " (pokud nechas prazdne tak " +
+                   "bude pouzito nahodne slovo): ")
+if len(first_word) == 0:
+    first_word = None
+cross.fill(first_word=first_word)
 #    print(cross.mask)
 #    print("")
 #    print(cross.crossword)
 cross.check(verbose = True)
-cross.plot_grid(filename='Crossword_empty.png')
-cross.plot_filled(filename='Crossword_filled.png')
+if first_word is None:
+    cross.plot_grid(filename='Crossword_empty.png')
+    cross.plot_filled(filename='Crossword_filled.png')
+else:
+    cross.plot_grid(filename='Crossword_empty.png',res_highlight=True)
+    cross.plot_filled(filename='Crossword_filled.png',res_highlight=True)
 shortest = input(text[5])

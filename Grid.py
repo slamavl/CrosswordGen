@@ -176,7 +176,7 @@ class Grid():
         self.closest = closest
                     
         
-    def plot_grid(self, filename=None):
+    def plot_grid(self, filename=None,res_highlight=False):
         import matplotlib.pyplot as plt
     
         black_sp = np.zeros(self.shape)
@@ -192,6 +192,18 @@ class Grid():
         ax.axes.get_xaxis().set_ticklabels([])
         ax.axes.get_yaxis().set_ticklabels([])
         
+        if res_highlight:
+            # plot blue rectangle
+            word_len = len(self.word2coor[0])
+            if is_column(self.word2coor[0]):
+                start = [self.word2coor[0][-1][0],self.word2coor[0][-1][1]]
+                start[0] = self.shape[0] - start[0] -1
+                rect = plt.Rectangle((start[1],start[0]), 1.0, float(word_len), color='b', alpha=0.2)
+            else:
+                start = [self.word2coor[0][0][0],self.word2coor[0][0][1]]
+                rect = plt.Rectangle((start[1],self.shape[0] - start[0] -1), float(word_len), 1.0, color='b', alpha=0.2)
+            ax.add_patch(rect)
+        
         offset = [0.1,0.7]
         mask = np.ones(self.shape,dtype = bool)
         count = 1
@@ -203,6 +215,8 @@ class Grid():
                 plt.text(start[1] + offset[0], start[0] + offset[1], str(count))
                 mask[start[0],start[1]] = False
                 count +=1
+        
+       
         
         if filename is not None:
             plt.savefig(filename,dpi = 1200)
@@ -252,6 +266,16 @@ def read_grid(filename):
                 wtsp.append([row,col])
     return shape,wtsp
                 
+
+def is_column(word_coor):
+    column = False
+    
+    if word_coor[0][1] == word_coor[-1][1]:
+        column = True
+    
+    return column
+    
+    
         #for col
 #                
 #        for row in range(self.shape[0]):
